@@ -1,0 +1,235 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Design tokens ───────────────────────────────────────────────── */
+:root {
+  /* Surfaces */
+  --bg-0: #04060f;
+  --bg-1: rgba(15, 23, 42, 0.55);
+  --bg-2: rgba(15, 23, 42, 0.4);
+  --bg-3: rgba(15, 23, 42, 0.24);
+
+  /* Text (graduated) */
+  --text-1: #e6e9f2;
+  --text-2: #94a3b8;
+  --text-3: #475569;
+  --text-4: #334155;
+
+  /* Hairlines & borders (snapped to a 4-step alpha scale: 06 / 10 / 18 / 28) */
+  --border-1: rgba(148, 163, 184, 0.06);
+  --border-2: rgba(148, 163, 184, 0.1);
+  --border-3: rgba(148, 163, 184, 0.18);
+  --border-4: rgba(148, 163, 184, 0.28);
+
+  /* Violet brand ramp (single source of truth) */
+  --violet-200: #ddd6fe;
+  --violet-300: #c4b5fd;
+  --violet-400: #c084fc;
+  --violet-500: #a855f7;
+  --violet-600: #9333ea;
+  --violet-700: #7e22ce;
+  --violet-800: #5b21b6;
+  --violet-900: #3b0764;
+
+  /* Brand gradients (3-stop, never flat) */
+  --grad-violet:        linear-gradient(140deg, #5b21b6 0%, #9333ea 55%, #c084fc 100%);
+  --grad-violet-soft:   linear-gradient(140deg, rgba(91, 33, 182, 0.62) 0%, rgba(126, 34, 206, 0.5) 55%, rgba(168, 85, 247, 0.42) 100%);
+  --grad-violet-deep:   linear-gradient(160deg, rgba(59, 7, 100, 0.7) 0%, rgba(91, 33, 182, 0.55) 50%, rgba(126, 34, 206, 0.42) 100%);
+
+  /* Etched-glass inset highlight (top edge catch-light) */
+  --inset-top: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --inset-top-strong: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  /* Glow tokens */
+  --glow-violet-xs: 0 0 8px rgba(168, 85, 247, 0.16);
+  --glow-violet-sm: 0 0 14px rgba(168, 85, 247, 0.22);
+  --glow-violet-md: 0 0 22px rgba(168, 85, 247, 0.22), 0 0 4px rgba(168, 85, 247, 0.35);
+  --glow-violet-lg: 0 0 36px rgba(168, 85, 247, 0.28), 0 0 6px rgba(168, 85, 247, 0.45);
+  --glow-teal-sm:   0 0 14px rgba(45, 212, 191, 0.2);
+  --glow-teal-md:   0 0 22px rgba(45, 212, 191, 0.22), 0 0 4px rgba(45, 212, 191, 0.32);
+}
+
+/* ── Base body + ambient glow ────────────────────────────────────── */
+html,
+body {
+  background: var(--bg-0);
+  color: var(--text-1);
+}
+
+body {
+  min-height: 100dvh;
+  display: flex;
+  justify-content: center;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Three-layer atmospheric glow — top-left violet pin-light, bottom-right teal undertow,
+   bottom magenta vignette for depth without competing with content. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 65% 45% at 12% 0%,    rgba(91, 33, 182, 0.18) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 40% at 88% 92%,   rgba(7, 89, 133, 0.10)  0%, transparent 65%),
+    radial-gradient(ellipse 90% 30% at 50% 110%,  rgba(168, 85, 247, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Focus ring (keyboard-only, on-brand) ────────────────────────── */
+*:focus {
+  outline: none;
+}
+*:focus-visible {
+  outline: 2px solid rgba(168, 85, 247, 0.55);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Textarea reset (design uses transparent/borderless) ─────────── */
+textarea {
+  border: none;
+  background: transparent;
+  resize: none;
+  font-family: inherit;
+  width: 100%;
+}
+textarea::placeholder {
+  color: #475569;
+}
+textarea:focus {
+  outline: none;
+}
+
+/* ── Tabular figures for mono numerics (XP/levels/percentages) ───── */
+.font-mono {
+  font-feature-settings: 'tnum' 1, 'cv11' 1;
+}
+
+/* ── Keyframes ───────────────────────────────────────────────────── */
+@keyframes aura-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes aura-spin-reverse {
+  to { transform: rotate(-360deg); }
+}
+@keyframes avatar-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-5px); }
+}
+@keyframes led-pulse {
+  0%, 100% { box-shadow: 0 0 3px var(--led); }
+  50%      { box-shadow: 0 0 9px var(--led), 0 0 16px var(--led); }
+}
+@keyframes blink {
+  0%, 100% { opacity: 0; }
+  50%      { opacity: 1; }
+}
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* ── Helper: LED dot that pulses using --led CSS var ─────────────── */
+.led {
+  width: 5px;
+  height: 5px;
+  border-radius: 9999px;
+  animation: led-pulse 2.8s ease-in-out infinite;
+}
+
+/* ── Helper: strike-through animation for completed tasks ────────── */
+.strike {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  height: 1px;
+  background: var(--text-3);
+  width: 0%;
+  transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.strike.done {
+  width: 100%;
+}
+
+/* ── Helper: press-feedback on Enter button ──────────────────────── */
+.enter-btn:active {
+  transform: scale(0.96);
+}
+
+/* ── Daily protocol accordion chevron ────────────────────────────── */
+@keyframes chev-glow-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 4px rgba(45, 212, 191, 0.45),
+      0 0 10px rgba(45, 212, 191, 0.25);
+  }
+  50% {
+    box-shadow:
+      0 0 9px rgba(45, 212, 191, 0.7),
+      0 0 18px rgba(45, 212, 191, 0.4);
+  }
+}
+@keyframes chev-sheen {
+  0%   { transform: translateX(-160%) skewX(-22deg); opacity: 0; }
+  18%  { opacity: 0.85; }
+  62%  { opacity: 0.85; }
+  100% { transform: translateX(160%) skewX(-22deg); opacity: 0; }
+}
+
+.chev-wrap {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: rgba(45, 212, 191, 0.06);
+  border: 1px solid rgba(45, 212, 191, 0.18);
+  transition: transform 240ms ease, background-color 240ms ease, border-color 240ms ease;
+}
+.chev-wrap.pending {
+  background: rgba(45, 212, 191, 0.1);
+  border-color: rgba(45, 212, 191, 0.32);
+  animation: chev-glow-pulse 2.4s ease-in-out infinite;
+}
+.chev-wrap.pending::after {
+  content: '';
+  position: absolute;
+  top: -25%;
+  bottom: -25%;
+  left: 0;
+  width: 45%;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(94, 234, 212, 0.85) 50%,
+    transparent 100%
+  );
+  transform: translateX(-160%) skewX(-22deg);
+  animation: chev-sheen 3.4s ease-in-out infinite;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+/* ── Reduced motion: respect user preference ─────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
