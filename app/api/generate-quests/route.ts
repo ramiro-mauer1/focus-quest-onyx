@@ -35,10 +35,19 @@ Cada misión madre tiene UN array 'subMissions' con al menos 1 elemento. Decidí
 
 Títulos (madre y sub-misiones):
 
-- Directos, claros, accionables. Empezá con un verbo. CERO jerga épica, metáforas ni palabras de fantasía. Lenguaje cotidiano (ej: 'Avanzar código de FocusQuest', no 'Forjar la Nueva Realidad Digital').
-- Cada título ÚNICO. Dentro de una misma misión madre, dos sub-misiones NUNCA pueden tener el mismo título. Dos misiones madre tampoco pueden repetir título entre sí.
-- Si dividís en sub-misiones, cada una se nombra por su entregable específico (NO 'Avanzar tesis' x3; SÍ 'Redactar introducción de la tesis', 'Armar bibliografía de la tesis').
-- Revisá la lista entera antes de devolverla: si hay títulos duplicados o casi iguales, reescribilos.
+- BREVES pero descriptivos. Que se entienda la tarea de un vistazo. Máximo ~5 palabras. CERO jerga épica, metáforas ni palabras de fantasía. Lenguaje cotidiano.
+- Madre = sustantivo/objetivo de alto nivel (el "qué" general). Sub-misión = verbo + acción concreta (el "cómo" / paso específico).
+- REGLA INVIOLABLE: el título de la madre NUNCA puede ser igual ni una variante mínima del título de ninguna sub-misión. Tampoco dos sub-misiones de la misma madre pueden tener el mismo título entre sí. Tampoco dos madres del mismo braindump pueden repetirse.
+- Ejemplos correctos (notar el contraste madre/sub):
+    • Madre: 'Apto físico para el gym' → sub: 'Sacar turno y certificado médico'.
+    • Madre: 'Factura de luz' → sub: 'Pagar factura de luz'.
+    • Madre: 'Mail de Juan' → sub: 'Responder mail de Juan'.
+    • Madre: 'Tesis' → subs: 'Redactar introducción', 'Armar bibliografía', 'Revisar capítulo 2'.
+    • Madre: 'Mudanza' → subs: 'Contratar flete', 'Embalar cocina', 'Dar de baja servicios'.
+- Ejemplos PROHIBIDOS:
+    • Madre: 'Conseguir apto médico para el gimnasio' / sub: 'Conseguir apto médico para el gimnasio' ← IDÉNTICOS, prohibido.
+    • Madre: 'Pagar factura de luz' / sub: 'Pagar la factura de luz' ← variante mínima, prohibido.
+- Revisá la lista entera antes de devolver el JSON: si encontrás un título madre que coincide con su sub, REESCRIBÍ la madre como sustantivo corto (el tema/objetivo) y dejá la sub como la acción.
 
 Skills (por sub-misión) — TRÍADA DE ATRIBUTOS:
 
@@ -62,11 +71,11 @@ OUTPUT — JSON estricto, sin markdown ni texto extra, con esta estructura exact
 {
   "quests": [
     {
-      "title": "Sacar apto físico para el gym",
+      "title": "Apto físico para el gym",
       "type": "Secundaria",
       "subMissions": [
         {
-          "title": "Sacar apto físico para el gym",
+          "title": "Sacar turno y certificado médico",
           "skills": [
             { "name": "Voluntad", "weight": 0.7 },
             { "name": "Vigor", "weight": 0.3 }
@@ -76,11 +85,11 @@ OUTPUT — JSON estricto, sin markdown ni texto extra, con esta estructura exact
       ]
     },
     {
-      "title": "Avanzar tesis",
+      "title": "Tesis",
       "type": "Principal",
       "subMissions": [
         {
-          "title": "Redactar introducción de la tesis",
+          "title": "Redactar introducción",
           "skills": [
             { "name": "Intelecto", "weight": 1.0 },
             { "name": "Voluntad", "weight": 0.4 }
@@ -88,7 +97,7 @@ OUTPUT — JSON estricto, sin markdown ni texto extra, con esta estructura exact
           "xp": 300
         },
         {
-          "title": "Armar bibliografía de la tesis",
+          "title": "Armar bibliografía",
           "skills": [
             { "name": "Voluntad", "weight": 0.8 },
             { "name": "Intelecto", "weight": 0.5 }
