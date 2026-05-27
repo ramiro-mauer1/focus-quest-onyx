@@ -4,16 +4,14 @@ import { useEffect, useRef, useState } from 'react';
 import Header from '@/components/Header';
 import AvatarStage from '@/components/AvatarStage';
 import BrainDump from '@/components/BrainDump';
-import QuestLog from '@/components/QuestLog';
+import QuestLog, { type IndexedQuest } from '@/components/QuestLog';
 import Toast from '@/components/Toast';
 import type { GeneratedQuest } from '@/lib/gemini';
 import { useXP } from '@/contexts/XPContext';
 import { SFX } from '@/lib/sfx';
 import ParticleOverlay from '@/components/ParticleOverlay';
 
-const ACTIVE_QUESTS_KEY = 'onyx_active_quests';
-
-type IndexedQuest = GeneratedQuest & { id: number };
+const ACTIVE_QUESTS_KEY = 'onyx_active_quests_v2';
 type ToastEntry = { id: string; message: string; tone: 'info' | 'levelup' };
 
 export default function HomePage() {
@@ -37,11 +35,25 @@ export default function HomePage() {
           const validSkills = new Set(['Intelecto', 'Vigor', 'Voluntad']);
           const cleaned = parsed.filter(
             (q) =>
-              Array.isArray(q.skills) &&
-              q.skills.every((s) => validSkills.has(s.name)),
+              Array.isArray(q.subMissions) &&
+              q.subMissions.length > 0 &&
+              q.subMissions.every(
+                (sub) =>
+                  typeof sub.title === 'string' &&
+                  typeof sub.xp === 'number' &&
+                  Array.isArray(sub.skills) &&
+                  sub.skills.every((s) => validSkills.has(s.name)),
+              ),
           );
-          setQuests(cleaned);
-          const maxId = cleaned.reduce((m, q) => Math.max(m, q.id), -1);
+          const normalized = cleaned.map((q) => ({
+            ...q,
+            subDone:
+              Array.isArray(q.subDone) && q.subDone.length === q.subMissions.length
+                ? q.subDone
+                : q.subMissions.map(() => false),
+          }));
+          setQuests(normalized);
+          const maxId = normalized.reduce((m, q) => Math.max(m, q.id), -1);
           nextQuestId.current = maxId + 1;
         }
       }
@@ -66,12 +78,41 @@ export default function HomePage() {
   const dismissTopToast = () => setToastQueue((q) => q.slice(1));
 
   const handleGenerated = (qs: GeneratedQuest[]) => {
-    const indexed = qs.map((q) => ({ ...q, id: nextQuestId.current++ }));
+    const validSkills = new Set(['Intelecto', 'Vigor', 'Voluntad']);
+    const indexed: IndexedQuest[] = qs
+      .filter(
+        (q) =>
+          Array.isArray(q.subMissions) &&
+          q.subMissions.length > 0 &&
+          q.subMissions.every(
+            (sub) =>
+              typeof sub.title === 'string' &&
+              typeof sub.xp === 'number' &&
+              Array.isArray(sub.skills) &&
+              sub.skills.every((s) => validSkills.has(s.name)),
+          ),
+      )
+      .map((q) => ({
+        ...q,
+        id: nextQuestId.current++,
+        subDone: q.subMissions.map(() => false),
+      }));
+    if (indexed.length === 0) {
+      enqueueToast({
+        message: '⚠ El Oráculo no devolvió misiones válidas — intentá de nuevo.',
+        tone: 'info',
+      });
+      return;
+    }
     setQuests((prev) => [...prev, ...indexed]);
     enqueueToast({
       message: '✓ Braindump recibido — procesando misiones...',
       tone: 'info',
     });
+  };
+
+  const handleUpdateQuest = (id: number, patch: Partial<IndexedQuest>) => {
+    setQuests((prev) => prev.map((q) => (q.id === id ? { ...q, ...patch } : q)));
   };
 
   const handleRemoveQuest = (id: number) => {
@@ -109,7 +150,11 @@ export default function HomePage() {
             onError={(msg) => setError(msg)}
           />
         </div>
-        <QuestLog quests={quests} onRemoveQuest={handleRemoveQuest} />
+        <QuestLog
+          quests={quests}
+          onUpdateQuest={handleUpdateQuest}
+          onRemoveQuest={handleRemoveQuest}
+        />
       </div>
       {currentToast && (
         <Toast

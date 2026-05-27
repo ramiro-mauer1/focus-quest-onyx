@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
-import { ChevronDown, Cpu, HeartPulse, MapPin, Trash2, type LucideIcon } from 'lucide-react';
+import { useEffect, useRef, useState, type MouseEvent } from 'react';
+import { ChevronDown, Trash2 } from 'lucide-react';
 import {
   AnimatePresence,
   motion,
@@ -14,40 +14,33 @@ import { useXP } from '@/contexts/XPContext';
 import { SFX } from '@/lib/sfx';
 import DailyProtocol from '@/components/DailyProtocol';
 
-const REMOVE_DELAY_MS = 800;
+const REMOVE_DELAY_MS = 1200;
+const COMPLETION_FX_DELAY_MS = 950;
 
-type GroupConfig = {
-  Icon: LucideIcon;
+type TypeStyle = {
   accent: string;
   glow: string;
   border: string;
-  label: string;
   tag: string;
 };
 
-const GROUP_BY_TYPE: Record<QuestType, GroupConfig> = {
+const TYPE_STYLE: Record<QuestType, TypeStyle> = {
   Principal: {
-    Icon: Cpu,
     accent: '#ef4444',
-    glow: 'rgba(239,68,68,0.12)',
-    border: 'rgba(239,68,68,0.22)',
-    label: 'Trabajo del Oráculo',
+    glow: 'rgba(239,68,68,0.15)',
+    border: 'rgba(239,68,68,0.5)',
     tag: 'PRINCIPAL',
   },
   Secundaria: {
-    Icon: MapPin,
     accent: '#22c55e',
-    glow: 'rgba(34,197,94,0.10)',
-    border: 'rgba(34,197,94,0.2)',
-    label: 'Operación Logística',
+    glow: 'rgba(34,197,94,0.13)',
+    border: 'rgba(34,197,94,0.45)',
     tag: 'SECUNDARIA',
   },
   Diaria: {
-    Icon: HeartPulse,
     accent: '#38bdf8',
-    glow: 'rgba(56,189,248,0.09)',
-    border: 'rgba(56,189,248,0.18)',
-    label: 'Protocolo Diario',
+    glow: 'rgba(56,189,248,0.12)',
+    border: 'rgba(56,189,248,0.42)',
     tag: 'DIARIA',
   },
 };
@@ -64,47 +57,102 @@ const SKILL_ABBR: Record<QuestSkill, string> = {
   Voluntad: 'VOL',
 };
 
-const ORDER: QuestType[] = ['Principal', 'Secundaria', 'Diaria'];
+export type IndexedQuest = GeneratedQuest & {
+  id: number;
+  subDone: boolean[];
+};
 
-type Indexed = GeneratedQuest & { id: number };
-type Props = { quests: Indexed[]; onRemoveQuest: (id: number) => void };
+type Props = {
+  quests: IndexedQuest[];
+  onUpdateQuest: (id: number, patch: Partial<IndexedQuest>) => void;
+  onRemoveQuest: (id: number) => void;
+};
 
 const SWIPE_DELETE_THRESHOLD = 0.4;
 
-type QuestItemProps = {
-  quest: Indexed;
-  cfg: GroupConfig;
-  isDone: boolean;
-  onComplete: (quest: Indexed, e: MouseEvent) => void;
-  onDelete: (id: number) => void;
+type MissionCardProps = {
+  quest: IndexedQuest;
+  onUpdate: (patch: Partial<IndexedQuest>) => void;
+  onDelete: () => void;
 };
 
-function QuestItem({ quest, cfg, isDone, onComplete, onDelete }: QuestItemProps) {
+function MissionCard({ quest, onUpdate, onDelete }: MissionCardProps) {
+  const { addXP } = useXP();
+  const style = TYPE_STYLE[quest.type] ?? TYPE_STYLE.Principal;
   const cardRef = useRef<HTMLDivElement>(null);
   const x = useMotionValue(0);
   const bgOpacity = useTransform(x, [0, 24, 120], [0, 0.55, 1]);
   const iconOpacity = useTransform(x, [0, 18, 90], [0, 0.7, 1]);
   const iconScale = useTransform(x, [0, 90], [0.6, 1]);
 
+  const [open, setOpen] = useState(false);
+  const [completing, setCompleting] = useState(false);
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  useEffect(() => {
+    return () => {
+      timersRef.current.forEach(clearTimeout);
+    };
+  }, []);
+
+  const totalXP = quest.subMissions.reduce((s, m) => s + m.xp, 0);
+  const doneCount = quest.subDone.filter(Boolean).length;
+  const totalCount = quest.subMissions.length;
+  const allDone = totalCount > 0 && doneCount === totalCount;
+
+  useEffect(() => {
+    if (!allDone || completing) return;
+    setCompleting(true);
+    const fx = setTimeout(() => {
+      SFX.taskDone();
+    }, COMPLETION_FX_DELAY_MS);
+    const remove = setTimeout(() => onDelete(), REMOVE_DELAY_MS);
+    timersRef.current.push(fx, remove);
+  }, [allDone, completing, onDelete]);
+
   const handleDragEnd = (_: unknown, info: PanInfo) => {
     const width = cardRef.current?.offsetWidth ?? 300;
     if (info.offset.x > width * SWIPE_DELETE_THRESHOLD) {
-      onDelete(quest.id);
+      onDelete();
     }
+  };
+
+  const toggleSub = (subIdx: number, e: MouseEvent) => {
+    e.stopPropagation();
+    if (quest.subDone[subIdx]) return;
+    const sub = quest.subMissions[subIdx];
+    if (!sub) return;
+
+    const next = quest.subDone.slice();
+    next[subIdx] = true;
+    onUpdate({ subDone: next });
+
+    const primarySkill = sub.skills[0]?.name ?? 'Intelecto';
+    const color = SKILL_COLOR[primarySkill as QuestSkill] ?? style.accent;
+    window.dispatchEvent(
+      new CustomEvent('spawn-particles', {
+        detail: { startX: e.clientX, startY: e.clientY, color },
+      }),
+    );
+
+    SFX.taskDone();
+    const impacts = sub.skills.map((s) => ({ skill: s.name, weight: s.weight }));
+    addXP(sub.xp, impacts);
   };
 
   return (
     <motion.div
       layout
       initial={{ opacity: 0, y: -6 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, height: 0, marginBottom: 0, scale: 0.95 }}
+      animate={{ opacity: completing ? 0.55 : 1, y: 0 }}
+      exit={{ opacity: 0, height: 0, marginBottom: 0, scale: 0.96 }}
       transition={{ duration: 0.4, ease: 'easeOut' }}
-      className="relative mb-[5px]"
+      className="relative mb-2"
     >
+      {/* Swipe-to-delete background */}
       <motion.div
         aria-hidden
-        className="absolute inset-0 rounded-[9px] flex items-center px-[14px] pointer-events-none overflow-hidden"
+        className="absolute inset-0 rounded-[13px] flex items-center px-[14px] pointer-events-none overflow-hidden"
         style={{
           opacity: bgOpacity,
           background:
@@ -134,153 +182,212 @@ function QuestItem({ quest, cfg, isDone, onComplete, onDelete }: QuestItemProps)
 
       <motion.div
         ref={cardRef}
-        drag={isDone ? false : 'x'}
+        drag={completing ? false : 'x'}
         dragConstraints={{ left: 0, right: 0 }}
         dragElastic={{ left: 0, right: 0.7 }}
         dragDirectionLock
         onDragEnd={handleDragEnd}
-        onClick={(e) => onComplete(quest, e)}
-        aria-disabled={isDone}
-        className="relative flex items-center gap-[11px] rounded-[9px] px-[11px] py-[9px] transition-colors duration-200"
+        className="relative rounded-[13px] overflow-hidden backdrop-blur-[10px]"
         style={{
           x,
-          background: isDone ? 'rgba(15,23,42,0.24)' : 'rgba(15,23,42,0.5)',
-          border: `1px solid ${
-            isDone ? 'rgba(148,163,184,0.06)' : 'rgba(148,163,184,0.1)'
-          }`,
-          boxShadow: isDone ? 'none' : 'inset 0 1px 0 rgba(255,255,255,0.025)',
-          cursor: isDone ? 'default' : 'pointer',
-          pointerEvents: isDone ? 'none' : 'auto',
+          background: allDone ? 'rgba(15,23,42,0.34)' : 'rgba(15,23,42,0.55)',
+          border: `1px solid ${allDone ? 'rgba(148,163,184,0.1)' : style.border}`,
+          boxShadow: allDone
+            ? 'inset 0 1px 0 rgba(255,255,255,0.03)'
+            : `0 0 24px ${style.glow}, 0 0 4px ${style.glow}, inset 0 1px 0 rgba(255,255,255,0.05)`,
           touchAction: 'pan-y',
         }}
       >
         <div
-          className="shrink-0 w-[17px] h-[17px] rounded-[5px] flex items-center justify-center transition-all duration-[250ms]"
-          style={{
-            border: `1.5px solid ${isDone ? cfg.accent : 'rgba(148,163,184,0.28)'}`,
-            background: isDone
-              ? `linear-gradient(140deg, ${cfg.accent}33, ${cfg.accent}14)`
-              : 'rgba(15,23,42,0.4)',
-            boxShadow: isDone
-              ? `0 0 8px ${cfg.accent}55, inset 0 1px 0 rgba(255,255,255,0.1)`
-              : 'inset 0 1px 0 rgba(255,255,255,0.03)',
-          }}
+          onClick={() => !completing && setOpen((o) => !o)}
+          className="flex items-center gap-[11px] px-[14px] py-3 cursor-pointer select-none"
         >
-          {isDone && (
-            <svg width="9" height="7" viewBox="0 0 10 8" fill="none">
-              <path
-                d="M1 4L3.5 6.5L9 1"
-                stroke={cfg.accent}
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          )}
-        </div>
-
-        <div className="flex-1 relative min-w-0">
-          <span
-            className="text-[13px] leading-[1.4] transition-colors duration-300"
-            style={{ color: isDone ? '#334155' : 'var(--text-1)' }}
-          >
-            {quest.title}
-          </span>
-          <div className="flex items-center gap-[4px] mt-[3px] flex-wrap">
-            {(quest.skills ?? []).map((s, i) => {
-              const skillColor = SKILL_COLOR[s.name];
-              const intensity = isDone ? 0.4 : 0.6 + s.weight * 0.4;
-              return (
-                <span
-                  key={`${s.name}-${i}`}
-                  className="font-mono font-bold rounded-[3px] px-[5px] py-[1px]"
-                  style={{
-                    fontSize: '7px',
-                    letterSpacing: '0.1em',
-                    color: isDone ? '#334155' : skillColor,
-                    background: isDone ? 'transparent' : `${skillColor}1c`,
-                    border: `1px solid ${
-                      isDone ? 'rgba(148,163,184,0.08)' : `${skillColor}40`
-                    }`,
-                    opacity: intensity,
-                  }}
-                >
-                  {SKILL_ABBR[s.name] ?? s.name.toUpperCase()}
-                  {s.weight < 1 ? (
-                    <span style={{ opacity: 0.65, marginLeft: 3 }}>
-                      ×{s.weight.toFixed(1)}
-                    </span>
-                  ) : null}
-                </span>
-              );
-            })}
+          <div className="flex-1 min-w-0">
+            <div
+              className="text-[14px] font-semibold leading-[1.3] truncate"
+              style={{
+                color: allDone ? '#475569' : 'var(--text-1)',
+                letterSpacing: '0.01em',
+                textDecoration: allDone ? 'line-through' : 'none',
+              }}
+            >
+              {quest.title}
+            </div>
+            <div className="flex items-center gap-2 mt-[3px]">
+              <span
+                className="font-mono font-bold rounded-[4px] px-[6px] py-[1px]"
+                style={{
+                  fontSize: '7.5px',
+                  letterSpacing: '0.1em',
+                  color: style.accent,
+                  background: `${style.accent}1f`,
+                  border: `1px solid ${style.accent}33`,
+                  boxShadow: `0 0 6px ${style.accent}1a`,
+                }}
+              >
+                {style.tag}
+              </span>
+              <span className="text-[10px] text-[var(--text-3)]">
+                {doneCount}/{totalCount} · {totalXP} XP
+              </span>
+            </div>
           </div>
-          <div className={`strike${isDone ? ' done' : ''}`} />
+
+          <div className="flex flex-col items-end gap-[5px] shrink-0">
+            <div
+              className="w-8 h-[3px] rounded-full bg-[rgba(15,23,42,0.6)]"
+              style={{ boxShadow: 'inset 0 1px 1px rgba(0,0,0,0.4)' }}
+            >
+              <div
+                className="h-full rounded-full transition-[width] duration-[400ms]"
+                style={{
+                  width: `${(doneCount / Math.max(totalCount, 1)) * 100}%`,
+                  background: `linear-gradient(90deg, ${style.accent}aa, ${style.accent})`,
+                  boxShadow: `0 0 6px ${style.accent}cc, 0 0 1px ${style.accent}`,
+                }}
+              />
+            </div>
+            <div
+              className="flex transition-transform duration-[220ms]"
+              style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
+            >
+              <ChevronDown size={13} color="#475569" strokeWidth={1.6} />
+            </div>
+          </div>
         </div>
 
-        <span
-          className="font-mono text-[10px] shrink-0"
-          style={{
-            color: isDone ? '#1e293b' : cfg.accent,
-            textShadow: isDone ? 'none' : `0 0 6px ${cfg.accent}50`,
-          }}
-        >
-          +{quest.xp} XP
-        </span>
+        <AnimatePresence initial={false}>
+          {open && (
+            <motion.div
+              key="sub-list"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              style={{ overflow: 'hidden' }}
+            >
+              <div className="px-[13px] pb-[13px]">
+                <div
+                  className="h-px mb-[10px]"
+                  style={{
+                    background: `linear-gradient(90deg, ${style.accent}30, transparent)`,
+                  }}
+                />
+                {quest.subMissions.map((sub, idx) => {
+                  const isDone = !!quest.subDone[idx];
+                  return (
+                    <div
+                      key={`${sub.title}-${idx}`}
+                      onClick={(e) => toggleSub(idx, e)}
+                      className="flex items-center gap-[11px] rounded-[9px] px-[11px] py-[9px] mb-[5px] last:mb-0 transition-colors duration-200"
+                      style={{
+                        background: isDone
+                          ? 'rgba(15,23,42,0.24)'
+                          : 'rgba(15,23,42,0.5)',
+                        border: `1px solid ${
+                          isDone ? 'rgba(148,163,184,0.06)' : 'rgba(148,163,184,0.1)'
+                        }`,
+                        boxShadow: isDone
+                          ? 'none'
+                          : 'inset 0 1px 0 rgba(255,255,255,0.025)',
+                        cursor: isDone ? 'default' : 'pointer',
+                        pointerEvents: isDone ? 'none' : 'auto',
+                      }}
+                    >
+                      <div
+                        className="shrink-0 w-[17px] h-[17px] rounded-[5px] flex items-center justify-center transition-all duration-[250ms]"
+                        style={{
+                          border: `1.5px solid ${
+                            isDone ? style.accent : 'rgba(148,163,184,0.28)'
+                          }`,
+                          background: isDone
+                            ? `linear-gradient(140deg, ${style.accent}33, ${style.accent}14)`
+                            : 'rgba(15,23,42,0.4)',
+                          boxShadow: isDone
+                            ? `0 0 8px ${style.accent}55, inset 0 1px 0 rgba(255,255,255,0.1)`
+                            : 'inset 0 1px 0 rgba(255,255,255,0.03)',
+                        }}
+                      >
+                        {isDone && (
+                          <svg width="9" height="7" viewBox="0 0 10 8" fill="none">
+                            <path
+                              d="M1 4L3.5 6.5L9 1"
+                              stroke={style.accent}
+                              strokeWidth="1.8"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <span
+                          className="text-[13px] leading-[1.4] transition-colors duration-300"
+                          style={{
+                            color: isDone ? '#334155' : 'var(--text-1)',
+                            textDecoration: isDone ? 'line-through' : 'none',
+                          }}
+                        >
+                          {sub.title}
+                        </span>
+                        <div className="flex items-center gap-[4px] mt-[3px] flex-wrap">
+                          {sub.skills.map((s, i) => {
+                            const skillColor = SKILL_COLOR[s.name];
+                            const intensity = isDone ? 0.4 : 0.6 + s.weight * 0.4;
+                            return (
+                              <span
+                                key={`${s.name}-${i}`}
+                                className="font-mono font-bold rounded-[3px] px-[5px] py-[1px]"
+                                style={{
+                                  fontSize: '7px',
+                                  letterSpacing: '0.1em',
+                                  color: isDone ? '#334155' : skillColor,
+                                  background: isDone
+                                    ? 'transparent'
+                                    : `${skillColor}1c`,
+                                  border: `1px solid ${
+                                    isDone
+                                      ? 'rgba(148,163,184,0.08)'
+                                      : `${skillColor}40`
+                                  }`,
+                                  opacity: intensity,
+                                }}
+                              >
+                                {SKILL_ABBR[s.name] ?? s.name.toUpperCase()}
+                                {s.weight < 1 ? (
+                                  <span style={{ opacity: 0.65, marginLeft: 3 }}>
+                                    ×{s.weight.toFixed(1)}
+                                  </span>
+                                ) : null}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <span
+                        className="font-mono text-[10px] shrink-0"
+                        style={{
+                          color: isDone ? '#1e293b' : style.accent,
+                          textShadow: isDone ? 'none' : `0 0 6px ${style.accent}50`,
+                        }}
+                      >
+                        +{sub.xp} XP
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </motion.div>
   );
 }
 
-export default function QuestLog({ quests, onRemoveQuest }: Props) {
-  const { addXP } = useXP();
-  const [open, setOpen] = useState<Record<string, boolean>>({});
-  const [done, setDone] = useState<Record<number, boolean>>({});
-  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-
-  useEffect(() => {
-    return () => {
-      timersRef.current.forEach(clearTimeout);
-    };
-  }, []);
-
-  const grouped = useMemo(() => {
-    const g: Record<QuestType, Indexed[]> = { Principal: [], Secundaria: [], Diaria: [] };
-    quests.forEach((q) => {
-      if (g[q.type]) g[q.type].push(q);
-    });
-    return g;
-  }, [quests]);
-
-  const toggleGroup = (id: string) => setOpen((o) => ({ ...o, [id]: !o[id] }));
-
-  const completeTask = (quest: Indexed, e: MouseEvent) => {
-    if (done[quest.id]) return;
-
-    setDone((d) => ({ ...d, [quest.id]: true }));
-
-    const primarySkill = (quest.skills ?? [])[0]?.name || 'Intelecto';
-    const color = SKILL_COLOR[primarySkill as QuestSkill] || '#a855f7';
-
-    window.dispatchEvent(
-      new CustomEvent('spawn-particles', {
-        detail: { startX: e.clientX, startY: e.clientY, color },
-      })
-    );
-
-    const xpDelay = setTimeout(() => {
-      SFX.taskDone();
-      const impacts = (quest.skills ?? []).map((s) => ({ skill: s.name, weight: s.weight }));
-      addXP(quest.xp, impacts);
-    }, 1050);
-    timersRef.current.push(xpDelay);
-
-    const t = setTimeout(() => onRemoveQuest(quest.id), REMOVE_DELAY_MS + 1050);
-    timersRef.current.push(t);
-  };
-
-  const visibleGroups = ORDER.filter((t) => grouped[t].length > 0);
-
+export default function QuestLog({ quests, onUpdateQuest, onRemoveQuest }: Props) {
   return (
     <div>
       <DailyProtocol />
@@ -322,124 +429,14 @@ export default function QuestLog({ quests, onRemoveQuest }: Props) {
       )}
 
       <AnimatePresence initial={false}>
-        {visibleGroups.map((type) => {
-          const cfg = GROUP_BY_TYPE[type];
-          const items = grouped[type];
-          const isOpen = open[type] !== false;
-          const completed = items.filter((t) => done[t.id]).length;
-          const totalXP = items.reduce((s, t) => s + t.xp, 0);
-          const allDone = completed === items.length;
-          const { Icon } = cfg;
-
-          return (
-            <motion.div
-              key={type}
-              layout
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, height: 0, marginBottom: 0, scale: 0.97 }}
-              transition={{ duration: 0.4, ease: 'easeOut' }}
-              className="rounded-[13px] mb-2 overflow-hidden backdrop-blur-[10px]"
-              style={{
-                background: allDone ? 'rgba(15,23,42,0.32)' : 'rgba(15,23,42,0.55)',
-                border: `1px solid ${
-                  isOpen ? cfg.border : allDone ? 'rgba(148,163,184,0.06)' : 'rgba(148,163,184,0.1)'
-                }`,
-                boxShadow: isOpen
-                  ? `0 0 24px ${cfg.glow}, 0 0 4px ${cfg.glow}, inset 0 1px 0 rgba(255,255,255,0.05)`
-                  : 'inset 0 1px 0 rgba(255,255,255,0.03)',
-              }}
-            >
-              <div
-                onClick={() => toggleGroup(type)}
-                className="flex items-center gap-[11px] px-[14px] py-3 cursor-pointer select-none"
-              >
-                <div
-                  className="shrink-0 w-9 h-9 rounded-[9px] flex items-center justify-center transition-all duration-200"
-                  style={{
-                    background: `linear-gradient(140deg, ${cfg.accent}1f, ${cfg.accent}08)`,
-                    border: `1.5px solid ${cfg.accent}${isOpen ? '5c' : '2e'}`,
-                    boxShadow: isOpen
-                      ? `0 0 14px ${cfg.accent}40, inset 0 1px 0 rgba(255,255,255,0.06)`
-                      : 'inset 0 1px 0 rgba(255,255,255,0.04)',
-                  }}
-                >
-                  <Icon size={16} color={allDone ? '#334155' : cfg.accent} strokeWidth={1.6} />
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <div
-                    className="text-[14px] font-semibold leading-[1.3]"
-                    style={{ color: allDone ? '#334155' : 'var(--text-1)', letterSpacing: '0.01em' }}
-                  >
-                    {cfg.label}
-                  </div>
-                  <div className="flex items-center gap-2 mt-[3px]">
-                    <span
-                      className="font-mono font-bold rounded-[4px] px-[6px] py-[1px]"
-                      style={{
-                        fontSize: '7.5px',
-                        letterSpacing: '0.1em',
-                        color: cfg.accent,
-                        background: `${cfg.accent}1f`,
-                        border: `1px solid ${cfg.accent}33`,
-                        boxShadow: `0 0 6px ${cfg.accent}1a`,
-                      }}
-                    >
-                      {cfg.tag}
-                    </span>
-                    <span className="text-[10px] text-[var(--text-3)]">
-                      {completed}/{items.length} · {totalXP} XP
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-end gap-[5px] shrink-0">
-                  <div
-                    className="w-8 h-[3px] rounded-full bg-[rgba(15,23,42,0.6)]"
-                    style={{ boxShadow: 'inset 0 1px 1px rgba(0,0,0,0.4)' }}
-                  >
-                    <div
-                      className="h-full rounded-full transition-[width] duration-[400ms]"
-                      style={{
-                        width: `${(completed / items.length) * 100}%`,
-                        background: `linear-gradient(90deg, ${cfg.accent}aa, ${cfg.accent})`,
-                        boxShadow: `0 0 6px ${cfg.accent}cc, 0 0 1px ${cfg.accent}`,
-                      }}
-                    />
-                  </div>
-                  <div
-                    className="flex transition-transform duration-[220ms]"
-                    style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                  >
-                    <ChevronDown size={13} color="#475569" strokeWidth={1.6} />
-                  </div>
-                </div>
-              </div>
-
-              {isOpen && (
-                <div className="px-[13px] pb-[13px]">
-                  <div
-                    className="h-px mb-[10px]"
-                    style={{ background: `linear-gradient(90deg, ${cfg.accent}30, transparent)` }}
-                  />
-                  <AnimatePresence initial={false}>
-                    {items.map((q) => (
-                      <QuestItem
-                        key={q.id}
-                        quest={q}
-                        cfg={cfg}
-                        isDone={!!done[q.id]}
-                        onComplete={completeTask}
-                        onDelete={onRemoveQuest}
-                      />
-                    ))}
-                  </AnimatePresence>
-                </div>
-              )}
-            </motion.div>
-          );
-        })}
+        {quests.map((q) => (
+          <MissionCard
+            key={q.id}
+            quest={q}
+            onUpdate={(patch) => onUpdateQuest(q.id, patch)}
+            onDelete={() => onRemoveQuest(q.id)}
+          />
+        ))}
       </AnimatePresence>
     </div>
   );

@@ -3,9 +3,14 @@ export type QuestSkill = 'Intelecto' | 'Vigor' | 'Voluntad';
 
 export type QuestSkillImpact = { name: QuestSkill; weight: number };
 
+export type SubMission = {
+  title: string;
+  skills: QuestSkillImpact[];
+  xp: number;
+};
+
 export type GeneratedQuest = {
   title: string;
   type: QuestType;
-  skills: QuestSkillImpact[];
-  xp: number;
+  subMissions: SubMission[];
 };
