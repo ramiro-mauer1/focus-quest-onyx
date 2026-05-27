@@ -29,10 +29,13 @@ export default function Header() {
 
   return (
     <div
-      className="sticky top-0 z-50 px-4 py-[10px]
+      className="sticky top-0 z-50 px-4 pb-[10px]
                  bg-[rgba(4,6,15,0.82)] backdrop-blur-[22px]
                  border-b border-[rgba(168,85,247,0.08)]"
-      style={{ boxShadow: '0 1px 0 rgba(255,255,255,0.02) inset, 0 12px 32px -16px rgba(0,0,0,0.6)' }}
+      style={{
+        paddingTop: 'calc(env(safe-area-inset-top) + 10px)',
+        boxShadow: '0 1px 0 rgba(255,255,255,0.02) inset, 0 12px 32px -16px rgba(0,0,0,0.6)',
+      }}
     >
       <div className="flex justify-center mb-[9px]">
         <div className="grid grid-cols-3 gap-[10px] w-full max-w-[360px]">

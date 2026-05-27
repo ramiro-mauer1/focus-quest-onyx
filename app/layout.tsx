@@ -55,7 +55,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <XPProvider>
           <div
             id="root"
-            className="relative z-[1] w-full max-w-[430px] min-h-dvh pb-14"
+            className="relative z-[1] w-full max-w-[430px] min-h-dvh"
+            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 56px)' }}
           >
             {children}
           </div>
