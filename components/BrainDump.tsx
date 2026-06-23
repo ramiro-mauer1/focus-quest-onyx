@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import type { GeneratedQuest } from '@/lib/gemini';
 
 type Props = {
@@ -44,7 +45,9 @@ export default function BrainDump({ onQuestsGenerated, onError }: Props) {
   };
 
   return (
-    <div
+    <motion.div
+      layout
+      transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
       className="rounded-[14px] px-4 py-[14px] backdrop-blur-[14px]
                  transition-[border-color,box-shadow,background-color] duration-[250ms]"
       style={{
@@ -83,7 +86,7 @@ export default function BrainDump({ onQuestsGenerated, onError }: Props) {
         onFocus={() => setFocus(true)}
         onBlur={() => setFocus(false)}
         disabled={loading}
-        placeholder="¿Qué tenés en la cabeza hoy? Volcá todo sin filtro..."
+        placeholder="¿qué tenés que hacer hoy?"
         rows={3}
         className="text-[#cbd5e1]"
         style={{
@@ -95,8 +98,10 @@ export default function BrainDump({ onQuestsGenerated, onError }: Props) {
       />
 
       <div className="flex justify-end mt-[10px]">
-        <button
-          className="enter-btn font-mono font-bold rounded-lg px-5 py-2 transition-all duration-200"
+        <motion.button
+          whileHover={canSubmit ? { scale: 1.02 } : {}}
+          whileTap={canSubmit ? { scale: 0.95 } : {}}
+          className="enter-btn font-mono font-bold rounded-lg px-5 py-2 transition-colors duration-200"
           onClick={handleSubmit}
           disabled={!canSubmit}
           style={{
@@ -115,8 +120,8 @@ export default function BrainDump({ onQuestsGenerated, onError }: Props) {
           }}
         >
           {loading ? 'GENERANDO...' : 'ENVIAR ↵'}
-        </button>
+        </motion.button>
       </div>
-    </div>
+    </motion.div>
   );
 }

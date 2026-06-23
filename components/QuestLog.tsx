@@ -142,11 +142,11 @@ function MissionCard({ quest, onUpdate, onDelete }: MissionCardProps) {
 
   return (
     <motion.div
-      layout
-      initial={{ opacity: 0, y: -6 }}
-      animate={{ opacity: completing ? 0.55 : 1, y: 0 }}
-      exit={{ opacity: 0, height: 0, marginBottom: 0, scale: 0.96 }}
-      transition={{ duration: 0.4, ease: 'easeOut' }}
+      layout="position"
+      initial={{ opacity: 0, y: -10, scale: 0.95 }}
+      animate={{ opacity: completing ? 0.55 : 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, height: 0, marginBottom: 0, scale: 0.9 }}
+      transition={{ type: 'spring', stiffness: 350, damping: 25 }}
       className="relative mb-2"
     >
       {/* Swipe-to-delete background */}
@@ -247,12 +247,12 @@ function MissionCard({ quest, onUpdate, onDelete }: MissionCardProps) {
                 }}
               />
             </div>
-            <div
-              className="flex transition-transform duration-[220ms]"
-              style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
+            <motion.div
+              animate={{ rotate: open ? 180 : 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
             >
               <ChevronDown size={13} color="#475569" strokeWidth={1.6} />
-            </div>
+            </motion.div>
           </div>
         </div>
 
@@ -263,7 +263,7 @@ function MissionCard({ quest, onUpdate, onDelete }: MissionCardProps) {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.25, ease: 'easeOut' }}
+              transition={{ type: 'spring', bounce: 0.2, duration: 0.5 }}
               style={{ overflow: 'hidden' }}
             >
               <div className="px-[13px] pb-[13px]">
@@ -276,9 +276,13 @@ function MissionCard({ quest, onUpdate, onDelete }: MissionCardProps) {
                 {quest.subMissions.map((sub, idx) => {
                   const isDone = !!quest.subDone[idx];
                   return (
-                    <div
+                    <motion.div
+                      layout="position"
+                      whileHover={!isDone ? { scale: 1.015, backgroundColor: 'rgba(30,41,59,0.7)' } : {}}
+                      whileTap={!isDone ? { scale: 0.98 } : {}}
+                      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                       key={`${sub.title}-${idx}`}
-                      onClick={(e) => toggleSub(idx, e)}
+                      onClick={(e: any) => toggleSub(idx, e)}
                       className="flex items-center gap-[11px] rounded-[9px] px-[11px] py-[9px] mb-[5px] last:mb-0 transition-colors duration-200"
                       style={{
                         background: isDone
@@ -309,15 +313,18 @@ function MissionCard({ quest, onUpdate, onDelete }: MissionCardProps) {
                         }}
                       >
                         {isDone && (
-                          <svg width="9" height="7" viewBox="0 0 10 8" fill="none">
-                            <path
+                          <motion.svg width="9" height="7" viewBox="0 0 10 8" fill="none">
+                            <motion.path
+                              initial={{ pathLength: 0 }}
+                              animate={{ pathLength: 1 }}
+                              transition={{ type: 'spring', bounce: 0, duration: 0.5 }}
                               d="M1 4L3.5 6.5L9 1"
                               stroke={style.accent}
                               strokeWidth="1.8"
                               strokeLinecap="round"
                               strokeLinejoin="round"
                             />
-                          </svg>
+                          </motion.svg>
                         )}
                       </div>
 
@@ -375,7 +382,7 @@ function MissionCard({ quest, onUpdate, onDelete }: MissionCardProps) {
                       >
                         +{sub.xp} XP
                       </span>
-                    </div>
+                    </motion.div>
                   );
                 })}
               </div>
@@ -422,8 +429,8 @@ export default function QuestLog({ quests, onUpdateQuest, onRemoveQuest }: Props
             ◇ NO HAY MISIONES ACTIVAS
           </div>
           <div className="text-[12px] text-[var(--text-3)] mt-2 leading-[1.5]">
-            Volcá tu primer reporte arriba.<br />
-            El Oráculo va a desglosarlo en misiones.
+            Volcá lo que tenés que hacer en el día.<br />
+            El Oráculo lo transformará en misiones.
           </div>
         </div>
       )}

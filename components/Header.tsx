@@ -1,6 +1,6 @@
 'use client';
 
-import { Brain, Flame, Sparkles, type LucideIcon } from 'lucide-react';
+import { Brain, BicepsFlexed, Sparkles, type LucideIcon } from 'lucide-react';
 import { getXPForNextLevel, useXP, type Skill } from '@/contexts/XPContext';
 
 function formatXP(n: number): string {
@@ -19,7 +19,7 @@ type Pillar = {
 
 const PILLARS: Pillar[] = [
   { key: 'Intelecto', label: 'INTELECTO', Icon: Brain,    color: '#22d3ee' },
-  { key: 'Vigor',     label: 'VIGOR',     Icon: Flame,    color: '#10b981' },
+  { key: 'Vigor',     label: 'VIGOR',     Icon: BicepsFlexed, color: '#10b981' },
   { key: 'Voluntad',  label: 'VOLUNTAD',  Icon: Sparkles, color: '#d946ef' },
 ];
 

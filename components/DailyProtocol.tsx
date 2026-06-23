@@ -116,10 +116,12 @@ export default function DailyProtocol() {
 
   return (
     <div className="mb-5">
-      <div
+      <motion.div
         role="button"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
+        whileHover={{ scale: 1.01 }}
+        whileTap={{ scale: 0.98 }}
         className="font-mono mb-3 pl-[1px] flex items-center gap-2 cursor-pointer select-none"
         style={{ fontSize: '10px', letterSpacing: '0.15em', color: ACCENT }}
       >
@@ -131,13 +133,14 @@ export default function DailyProtocol() {
             {DAILY_QUESTS.length - pendingCount}/{DAILY_QUESTS.length}
           </span>
         )}
-        <div
+        <motion.div
           className={`chev-wrap ml-auto ${hasPending ? 'pending' : ''}`}
-          style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
+          animate={{ rotate: open ? 180 : 0 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
         >
           <ChevronDown size={13} color={ACCENT} strokeWidth={1.7} />
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       <AnimatePresence initial={false}>
         {open && (
@@ -146,7 +149,7 @@ export default function DailyProtocol() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.32, ease: 'easeOut' }}
+            transition={{ type: 'spring', bounce: 0.2, duration: 0.5 }}
             style={{ overflow: 'hidden' }}
           >
             <div
@@ -181,11 +184,13 @@ export default function DailyProtocol() {
             {visible.map((q) => (
               <motion.div
                 key={q.id}
-                layout
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, height: 0, marginBottom: 0, scale: 0.95 }}
-                transition={{ duration: 0.4, ease: 'easeOut' }}
+                layout="position"
+                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, height: 0, marginBottom: 0, scale: 0.9 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                whileHover={{ scale: 1.015, backgroundColor: 'rgba(30,41,59,0.7)' }}
+                whileTap={{ scale: 0.98 }}
                 onClick={(e) => completeDaily(q, e)}
                 className="flex items-center gap-[11px] rounded-[9px] px-[11px] py-[9px] mb-[5px] cursor-pointer transition-colors duration-200"
                 style={{
