@@ -2,24 +2,17 @@
 
 Este archivo es leído automáticamente por Claude Code (y debería ser revisado por cualquier asistente de IA antes de trabajar en este repo). Contiene reglas de seguridad y deuda técnica conocida que **NO** deben ignorarse.
 
-## ⚠️ Seguridad — pendientes críticos antes de deploy
+## ⚠️ Seguridad
 
-### 1. API key de Gemini está expuesta al cliente
+### 1. API key de Gemini: solo del lado del servidor
 
-Actualmente la key vive en `.env.local` como:
+La key vive en `.env.local` como `GEMINI_API_KEY` (sin prefijo `NEXT_PUBLIC_`) y solo la lee el Route Handler `app/api/generate-quests/route.ts`. El cliente (`components/BrainDump.tsx`) le pega a `/api/generate-quests`, nunca directo a la API de Google.
 
-```
-NEXT_PUBLIC_GEMINI_API_KEY=...
-```
+**Mantenerlo así:**
 
-El prefijo `NEXT_PUBLIC_` hace que Next.js inyecte la variable en el bundle del navegador. Cualquier visitante puede abrir DevTools y leerla. **Esto es aceptable solo durante prototipado local.**
-
-**Antes de cualquier deploy / push a un repo público, hay que:**
-
-1. Renombrar la variable a `GEMINI_API_KEY` (sin `NEXT_PUBLIC_`).
-2. Mover todas las llamadas a Gemini a un Route Handler del lado del servidor (ej: `app/api/gemini/route.ts`).
-3. El cliente debe pegarle a ese endpoint interno, nunca directo a la API de Google.
-4. Rotar la key actual (`AIzaSyBxiish...`) ya que estuvo embebida en el bundle público durante desarrollo.
+1. Nunca usar `NEXT_PUBLIC_` para la key: Next.js inyecta esas variables en el bundle del navegador y cualquiera puede leerlas en DevTools.
+2. Toda llamada nueva a Gemini va en un Route Handler del servidor.
+3. Nunca escribir la key, ni siquiera un fragmento, en código, docs, commits o logs.
 
 ### 2. Archivos sensibles que NUNCA deben commitearse
 
