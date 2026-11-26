@@ -2,6 +2,8 @@
 
 PWA de productividad pensada para personas con TDAH: escribís todo lo que tenés en la cabeza y la app lo convierte en misiones de un juego de rol, con submisiones cortas y un avatar que reacciona a tu avance.
 
+**Demo:** https://focusquest-brown.vercel.app
+
 <img src="docs/screenshot.jpg" alt="Pantalla de inicio de FocusQuest" width="300">
 
 ## Qué hace
